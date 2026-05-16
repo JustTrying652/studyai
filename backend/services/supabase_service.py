@@ -19,7 +19,7 @@ def download_file_from_storage(file_path: str) -> bytes:
     response = supabase.storage.from_(BUCKET_NAME).download(file_path)
     return response
 
-def save_result(user_id: str, file_name: str, file_path: str, mode: str, result: str) -> dict:
+def save_result(user_id: str, file_name: str, file_path: str, mode: str, result: str, extracted_text: str) -> dict:
     """Save AI-generated result to the study_results table."""
     data = {
         "user_id": user_id,
@@ -27,6 +27,7 @@ def save_result(user_id: str, file_name: str, file_path: str, mode: str, result:
         "file_path": file_path,
         "mode": mode,
         "result": result,
+        "extracted_text": extracted_text
     }
     response = supabase.table("study_results").insert(data).execute()
     return response.data[0]
@@ -46,7 +47,7 @@ def get_result_by_id(result_id: str, user_id: str) -> dict | None:
     """Fetch a single result by ID, scoped to the user."""
     response = (
         supabase.table("study_results")
-        .select("id, file_name, mode, created_at, result")
+        .select("id, file_name, mode, created_at, result, extracted_text")
         .eq("id", result_id)
         .eq("user_id", user_id)
         .single()

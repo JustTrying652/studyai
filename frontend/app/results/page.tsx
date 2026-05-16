@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import { createClient } from "@/lib/supabase";
-import { fetchResult, deleteResult } from "@/lib/api";
+import { fetchResult, deleteResult, sendChatMessage, ChatMessage } from "@/lib/api";
 
 const MODE_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   answers: { label: "Answers",         color: "#4f8ef7", bg: "rgba(79,142,247,0.12)" },
@@ -26,6 +26,10 @@ function ResultsContent() {
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [userId, setUserId] = useState("");
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatError, setChatError] = useState("");
 
   useEffect(() => {
     if (!id) return;
@@ -62,6 +66,26 @@ function ResultsContent() {
       setShowDeleteConfirm(false);
     }
   }
+  async function sendMessage() {
+  if (!chatInput.trim() || !userId || !id || chatLoading) return;
+  const userMessage = chatInput.trim();
+  setChatInput("");
+  setChatError("");
+
+  const newHistory: ChatMessage[] = [...chatMessages, { role: "user", content: userMessage }];
+  setChatMessages(newHistory);
+  setChatLoading(true);
+
+  try {
+    const { reply } = await sendChatMessage(userId, id, userMessage, chatMessages);
+    setChatMessages([...newHistory, { role: "assistant", content: reply }]);
+  } catch (err: any) {
+    setChatError(err.message || "Failed to get response.");
+    setChatMessages(newHistory); // keep user message visible
+  } finally {
+    setChatLoading(false);
+  }
+}
 
   const modeConf = result ? (MODE_CONFIG[result.mode] || MODE_CONFIG.both) : null;
 
@@ -238,6 +262,139 @@ function ResultsContent() {
             </div>
           )}
         </div>
+        {/* Chat section */}
+{result && (
+  <div style={{ marginTop: 48, borderTop: '1px solid var(--border)', paddingTop: 36 }}>
+    <div style={{ marginBottom: 20 }}>
+      <h2 style={{
+        fontFamily: "'DM Serif Display', serif",
+        fontSize: '1.3rem', color: 'var(--text)', marginBottom: 6
+      }}>Ask a question</h2>
+      <p style={{ color: 'var(--text-muted)', fontSize: '0.83rem' }}>
+        Ask anything about this document — clarifications, examples, deeper explanations.
+      </p>
+    </div>
+
+    {/* Message history */}
+    {chatMessages.length > 0 && (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
+        {chatMessages.map((msg, i) => (
+          <div key={i} style={{
+            display: 'flex',
+            justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start'
+          }}>
+            <div style={{
+              maxWidth: '85%',
+              padding: '12px 16px',
+              borderRadius: msg.role === 'user' ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
+              background: msg.role === 'user'
+                ? 'linear-gradient(135deg, #4f8ef7, #a78bfa)'
+                : 'var(--bg-card)',
+              border: msg.role === 'user' ? 'none' : '1px solid var(--border)',
+              color: msg.role === 'user' ? '#fff' : 'var(--text)',
+              fontSize: '0.88rem', lineHeight: 1.6
+            }}>
+              {msg.role === 'assistant' ? (
+                <div className="study-prose" style={{ fontSize: '0.88rem' }}>
+                  <ReactMarkdown>{msg.content}</ReactMarkdown>
+                </div>
+              ) : (
+                msg.content
+              )}
+            </div>
+          </div>
+        ))}
+
+        {/* AI typing indicator */}
+        {chatLoading && (
+          <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+            <div style={{
+              padding: '12px 16px', borderRadius: '14px 14px 14px 4px',
+              background: 'var(--bg-card)', border: '1px solid var(--border)',
+              display: 'flex', gap: 5, alignItems: 'center'
+            }}>
+              {[0,1,2].map(i => (
+                <div key={i} style={{
+                  width: 5, height: 5, borderRadius: '50%', background: 'var(--accent)',
+                  animation: 'pulse-dot 1.2s ease infinite', animationDelay: `${i * 0.2}s`
+                }} />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    )}
+
+    {chatError && (
+      <p style={{
+        color: 'var(--danger)', fontSize: '0.82rem', marginBottom: 12,
+        padding: '8px 12px', background: 'rgba(248,113,113,0.08)',
+        borderRadius: 8, border: '1px solid rgba(248,113,113,0.2)'
+      }}>{chatError}</p>
+    )}
+
+    {/* Input */}
+    <div style={{ display: 'flex', gap: 10 }}>
+      <input
+        type="text"
+        placeholder="e.g. Explain question 3 in simpler terms..."
+        value={chatInput}
+        onChange={e => setChatInput(e.target.value)}
+        onKeyDown={e => e.key === 'Enter' && sendMessage()}
+        disabled={chatLoading}
+        style={{
+          flex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)',
+          borderRadius: 10, padding: '12px 16px', color: 'var(--text)',
+          fontSize: '0.88rem', outline: 'none', transition: 'border-color 0.2s',
+          fontFamily: "'DM Sans', sans-serif",
+          opacity: chatLoading ? 0.6 : 1
+        }}
+        onFocus={e => e.target.style.borderColor = 'var(--accent)'}
+        onBlur={e => e.target.style.borderColor = 'var(--border)'}
+      />
+      <button onClick={sendMessage} disabled={!chatInput.trim() || chatLoading}
+        style={{
+          background: !chatInput.trim() || chatLoading
+            ? 'var(--bg-card)'
+            : 'linear-gradient(135deg, #4f8ef7, #a78bfa)',
+          border: `1px solid ${!chatInput.trim() || chatLoading ? 'var(--border)' : 'transparent'}`,
+          borderRadius: 10, padding: '12px 20px',
+          color: !chatInput.trim() || chatLoading ? 'var(--text-muted)' : '#fff',
+          fontSize: '0.88rem', fontWeight: 600,
+          cursor: !chatInput.trim() || chatLoading ? 'not-allowed' : 'pointer',
+          transition: 'all 0.2s', fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap'
+        }}
+      >
+        {chatLoading ? '...' : 'Ask →'}
+      </button>
+    </div>
+
+    {chatMessages.length === 0 && (
+      <div style={{ marginTop: 16, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        {[
+          "Summarise the key points",
+          "Explain this in simpler terms",
+          "What are the most important concepts?",
+          "Give me a memory trick for this",
+        ].map(suggestion => (
+          <button key={suggestion}
+            onClick={() => { setChatInput(suggestion); }}
+            style={{
+              background: 'var(--bg-card)', border: '1px solid var(--border)',
+              borderRadius: 20, padding: '6px 14px', color: 'var(--text-muted)',
+              fontSize: '0.75rem', cursor: 'pointer', transition: 'all 0.15s',
+              fontFamily: "'DM Sans', sans-serif"
+            }}
+            onMouseEnter={e => { (e.target as HTMLElement).style.borderColor = 'var(--accent)'; (e.target as HTMLElement).style.color = 'var(--accent)'; }}
+            onMouseLeave={e => { (e.target as HTMLElement).style.borderColor = 'var(--border)'; (e.target as HTMLElement).style.color = 'var(--text-muted)'; }}
+          >
+            {suggestion}
+          </button>
+        ))}
+      </div>
+    )}
+  </div>
+)}
       </main>
     </>
   );

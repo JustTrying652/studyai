@@ -40,3 +40,28 @@ export async function deleteResult(userId: string, resultId: string) {
   if (!res.ok) throw new Error("Failed to delete");
   return res.json();
 }
+
+export interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export async function sendChatMessage(
+  userId: string,
+  resultId: string,
+  message: string,
+  history: ChatMessage[]
+) {
+  const res = await fetch(`${API_URL}/chat/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      user_id: userId,
+      result_id: resultId,
+      message,
+      history,
+    }),
+  });
+  if (!res.ok) { const err = await res.json(); throw new Error(err.detail || "Chat failed"); }
+  return res.json(); // { reply: string }
+}

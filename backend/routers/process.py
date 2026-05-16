@@ -43,6 +43,7 @@ async def process_file(request: ProcessRequest):
         file_path=request.file_path,
         mode=request.mode.value,
         result=result,
+        extracted_text=content,
     )
 
     return ProcessResponse(

@@ -1,8 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routers import upload, process, history
-import os
+from routers import upload, process, history, chat
 
+import os
+app.include_router(chat.router, prefix="/chat", tags=["chat"])
 app = FastAPI(title="StudyAI API", version="1.0.0")
 
 origins = [
