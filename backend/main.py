@@ -7,8 +7,7 @@ app = FastAPI(title="StudyAI API", version="1.0.0")
 # Allow requests from Next.js frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"
-                  "https://studyai-backend-42uv.onrender.com/"],
+    allow_origins=["http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
