@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -13,7 +14,8 @@ const MODE_CONFIG: Record<string, { label: string; color: string; bg: string }> 
   both:    { label: "Answers + Notes", color: "#a78bfa", bg: "rgba(167,139,250,0.12)" },
 };
 
-export default function ResultsPage() {
+// ── Inner component (uses useSearchParams — must be inside Suspense) ──
+function ResultsContent() {
   const params = useSearchParams();
   const router = useRouter();
   const id = params.get("id");
@@ -65,7 +67,6 @@ export default function ResultsPage() {
 
   return (
     <>
-      {/* Print styles */}
       <style>{`
         @media print {
           nav, .no-print { display: none !important; }
@@ -117,7 +118,6 @@ export default function ResultsPage() {
 
         <div style={{ maxWidth: 740, margin: '0 auto', padding: '36px 20px 80px' }}>
 
-          {/* Loading */}
           {loading && (
             <div style={{ display: 'flex', gap: 6, padding: '20px 0', alignItems: 'center' }}>
               {[0,1,2].map(i => (
@@ -136,7 +136,6 @@ export default function ResultsPage() {
           {result && modeConf && (
             <div className="animate-fade-up">
 
-              {/* Print-only header */}
               <div className="print-header">
                 <h2 style={{ fontSize: '1.1rem', marginBottom: 4 }}>{result.file_name.replace(/\.[^.]+$/, '')}</h2>
                 <p style={{ fontSize: '0.8rem', color: '#666' }}>
@@ -144,7 +143,6 @@ export default function ResultsPage() {
                 </p>
               </div>
 
-              {/* Header */}
               <div style={{ marginBottom: 28, paddingBottom: 22, borderBottom: '1px solid var(--border)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
                   <span style={{
@@ -168,7 +166,6 @@ export default function ResultsPage() {
                     {result.file_name.replace(/\.[^.]+$/, '')}
                   </h1>
 
-                  {/* Action buttons */}
                   <div className="no-print" style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
                     <button onClick={handleCopy} style={{
                       background: copied ? 'rgba(52,211,153,0.1)' : 'var(--bg-card)',
@@ -207,7 +204,6 @@ export default function ResultsPage() {
                 </div>
               </div>
 
-              {/* Delete confirmation */}
               {showDeleteConfirm && (
                 <div className="animate-fade-in no-print" style={{
                   padding: '16px 18px', borderRadius: 12, marginBottom: 24,
@@ -236,7 +232,6 @@ export default function ResultsPage() {
                 </div>
               )}
 
-              {/* AI content */}
               <div className="study-prose">
                 <ReactMarkdown>{result.result}</ReactMarkdown>
               </div>
@@ -245,5 +240,25 @@ export default function ResultsPage() {
         </div>
       </main>
     </>
+  );
+}
+
+// ── Outer component wraps inner in Suspense ──
+export default function ResultsPage() {
+  return (
+    <Suspense fallback={
+      <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {[0,1,2].map(i => (
+            <div key={i} style={{
+              width: 6, height: 6, borderRadius: '50%', background: '#4f8ef7',
+              animation: 'pulse-dot 1.2s ease infinite', animationDelay: `${i * 0.2}s`
+            }} />
+          ))}
+        </div>
+      </main>
+    }>
+      <ResultsContent />
+    </Suspense>
   );
 }
