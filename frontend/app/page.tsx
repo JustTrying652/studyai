@@ -1,6 +1,10 @@
+import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { redirect } from "next/navigation";
+import LandingPage from "./landing/page";
 
-// Root redirects to dashboard for now (add auth check here later)
-export default function Home() {
-  redirect("/dashboard");
+export default async function RootPage() {
+  const supabase = createServerSupabaseClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) redirect("/dashboard");
+  return <LandingPage />;
 }
