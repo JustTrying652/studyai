@@ -24,7 +24,7 @@ async def process_file(request: ProcessRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
     if not text:
-        raise HTTPException(status_code=422, detail="Could not extract text from file. Is it a scanned image PDF?")
+        raise HTTPException(status_code=422, detail="Could not extract text from file even after OCR. Please check the file and try again.")
 
     # 3. Chunk if needed and process (for MVP, use first chunk only)
     chunks = chunk_text(text)

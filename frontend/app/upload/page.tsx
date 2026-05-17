@@ -180,11 +180,11 @@ export default function UploadPage() {
             background: 'rgba(251,146,60,0.08)', border: '1px solid rgba(251,146,60,0.25)'
           }}>
             <p style={{ color: '#fb923c', fontWeight: 600, fontSize: '0.85rem', marginBottom: 4 }}>
-              📸 Scanned PDF detected
+              📸 Could not read this document
             </p>
             <p style={{ color: '#fb923c', fontSize: '0.78rem', opacity: 0.8, lineHeight: 1.5 }}>
-              This PDF contains images instead of text — it was likely scanned from a physical paper.
-              Please use a PDF with selectable text, or retype the content as a TXT file.
+              This PDF appears to be a low-quality scan.
+              Try a cleaner scan or retype the content as a txt file.
             </p>
           </div>
         )}
