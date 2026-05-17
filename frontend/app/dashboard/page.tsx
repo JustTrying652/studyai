@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase";
@@ -35,154 +35,6 @@ function shortName(filename: string) {
   return name.length > 38 ? name.slice(0, 38) + "…" : name;
 }
 
-// Individual session row — has its own ref for the assign button
-function SessionRow({
-  item, subjects, userId,
-  isDeleting, isAssigning,
-  onAssignOpen, onAssignClose,
-  onAssign, onDelete, onDeleteConfirm, onDeleteCancel,
-}: any) {
-  const btnRef = useRef<HTMLButtonElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const avatar = getFileAvatar(item.file_name);
-  const modeConf = MODE_CONFIG[item.mode] || MODE_CONFIG.both;
-  const itemSubject = subjects.find((s: any) => s.id === item.subject_id);
-
-  function handleAssignClick(e: React.MouseEvent) {
-    e.stopPropagation();
-    if (isAssigning) { onAssignClose(); return; }
-    if (btnRef.current) {
-      const rect = btnRef.current.getBoundingClientRect();
-      onAssignOpen(item.id, rect);
-    }
-  }
-
-  return (
-    <div>
-      {isDeleting && (
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          background: 'rgba(248,113,113,0.06)', border: '1px solid rgba(248,113,113,0.2)',
-          borderRadius: 10, padding: '10px 14px', marginBottom: 4
-        }}>
-          <p style={{ color: 'var(--danger)', fontSize: '0.8rem' }}>Delete this session?</p>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={onDeleteConfirm} style={{ background: 'rgba(248,113,113,0.15)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 6, padding: '4px 12px', color: 'var(--danger)', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Delete</button>
-            <button onClick={onDeleteCancel} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 12px', color: 'var(--text-muted)', fontSize: '0.78rem', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Cancel</button>
-          </div>
-        </div>
-      )}
-
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 12,
-        background: 'var(--bg-card)', border: `1px solid ${isDeleting ? 'rgba(248,113,113,0.2)' : 'var(--border)'}`,
-        borderRadius: 12, padding: '13px 14px', transition: 'all 0.15s',
-      }}
-        onMouseEnter={e => { if (!isDeleting) { e.currentTarget.style.borderColor = 'var(--border-hover)'; e.currentTarget.style.background = 'var(--bg-hover)'; }}}
-        onMouseLeave={e => { if (!isDeleting) { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--bg-card)'; }}}
-      >
-        {/* Avatar */}
-        <div style={{ width: 40, height: 40, borderRadius: 10, flexShrink: 0, background: avatar.bg, border: `1px solid ${avatar.color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <span style={{ color: avatar.color, fontSize: '0.8rem', fontWeight: 700 }}>{avatar.initials}</span>
-        </div>
-
-        {/* Info */}
-        <Link href={`/results?id=${item.id}`} style={{ flex: 1, minWidth: 0, textDecoration: 'none' }}>
-          <p style={{ color: 'var(--text)', fontSize: '0.88rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {shortName(item.file_name)}
-          </p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3, flexWrap: 'wrap' }}>
-            <span style={{ background: modeConf.bg, color: modeConf.color, fontSize: '0.68rem', fontWeight: 600, padding: '2px 8px', borderRadius: 20 }}>
-              {modeConf.label}
-            </span>
-            {itemSubject && (
-              <span style={{ background: `${itemSubject.color}18`, color: itemSubject.color, fontSize: '0.68rem', fontWeight: 600, padding: '2px 8px', borderRadius: 20, display: 'flex', alignItems: 'center', gap: 4 }}>
-                <span style={{ width: 5, height: 5, borderRadius: '50%', background: itemSubject.color }} />
-                {itemSubject.name}
-              </span>
-            )}
-            <span style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>
-              {new Date(item.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-            </span>
-          </div>
-        </Link>
-
-        {/* Assign button */}
-        <button
-          ref={btnRef}
-          onClick={handleAssignClick}
-          title="Assign subject"
-          style={{
-            background: isAssigning ? 'var(--bg-hover)' : 'none',
-            border: isAssigning ? '1px solid var(--border)' : 'none',
-            padding: '6px 7px', color: itemSubject ? itemSubject.color : 'var(--text-subtle)',
-            cursor: 'pointer', fontSize: '1rem', borderRadius: 6, transition: 'all 0.15s',
-            lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-          }}
-          onMouseEnter={e => (e.currentTarget.style.color = 'var(--accent)')}
-          onMouseLeave={e => (e.currentTarget.style.color = itemSubject ? itemSubject.color : 'var(--text-subtle)')}
-        >⊕</button>
-
-        {/* Delete button */}
-        <button onClick={() => onDelete()}
-          style={{ background: 'none', border: 'none', padding: '6px 6px', color: isDeleting ? 'var(--danger)' : 'var(--text-subtle)', cursor: 'pointer', fontSize: '0.85rem', borderRadius: 6, transition: 'all 0.15s', flexShrink: 0 }}
-          onMouseEnter={e => (e.target as HTMLElement).style.color = 'var(--danger)'}
-          onMouseLeave={e => (e.target as HTMLElement).style.color = isDeleting ? 'var(--danger)' : 'var(--text-subtle)'}
-          title="Delete session"
-        >✕</button>
-      </div>
-
-      {/* Assign dropdown — inline, right-aligned, above or below based on space */}
-      {isAssigning && (
-        <div
-          ref={dropdownRef}
-          onMouseDown={e => e.stopPropagation()}
-          style={{
-            position: 'absolute', right: 0, marginTop: 4,
-            zIndex: 999, background: 'var(--bg-card)',
-            border: '1px solid var(--border-hover)', borderRadius: 12,
-            padding: '8px', minWidth: 190,
-            boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
-          }}
-        >
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', padding: '4px 8px 8px' }}>
-            Assign to subject
-          </p>
-          {item.subject_id && (
-            <button onClick={() => onAssign(null)} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: '8px 10px', color: 'var(--danger)', fontSize: '0.82rem', cursor: 'pointer', borderRadius: 8, fontFamily: "'DM Sans', sans-serif", marginBottom: 4 }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(248,113,113,0.08)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'none')}
-            >✕ Remove subject</button>
-          )}
-          {subjects.length === 0 && (
-            <p style={{ color: 'var(--text-subtle)', fontSize: '0.78rem', padding: '6px 10px' }}>No subjects yet — create one above</p>
-          )}
-          {subjects.map((s: any) => {
-            const isActive = item.subject_id === s.id;
-            return (
-              <button key={s.id} onClick={() => onAssign(s.id)} style={{
-                display: 'flex', alignItems: 'center', gap: 10, width: '100%',
-                textAlign: 'left', background: isActive ? `${s.color}15` : 'none',
-                border: 'none', padding: '8px 10px',
-                color: isActive ? s.color : 'var(--text)',
-                fontSize: '0.82rem', cursor: 'pointer', borderRadius: 8,
-                fontFamily: "'DM Sans', sans-serif", transition: 'background 0.1s'
-              }}
-                onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--bg-hover)'; }}
-                onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'none'; }}
-              >
-                <span style={{ width: 10, height: 10, borderRadius: '50%', background: s.color, flexShrink: 0 }} />
-                {s.name}
-                {isActive && <span style={{ marginLeft: 'auto', fontSize: '0.75rem' }}>✓</span>}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
 export default function DashboardPage() {
   const router = useRouter();
   const supabase = createClient();
@@ -215,12 +67,6 @@ export default function DashboardPage() {
     }
     load();
   }, []);
-
-  useEffect(() => {
-    function handleClick() { setAssigningTo(null); }
-    if (assigningTo) document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [assigningTo]);
 
   async function handleLogout() {
     await supabase.auth.signOut();
@@ -271,6 +117,8 @@ export default function DashboardPage() {
 
   return (
     <main style={{ minHeight: '100vh', position: 'relative', zIndex: 1 }}>
+
+      {/* Nav */}
       <nav style={{
         borderBottom: '1px solid var(--border)', padding: '0 20px', height: 54,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -296,6 +144,7 @@ export default function DashboardPage() {
 
       <div style={{ maxWidth: 700, margin: '0 auto', padding: '40px 20px 80px' }}>
 
+        {/* Header */}
         <div className="animate-fade-up" style={{ marginBottom: 32 }}>
           <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 'clamp(1.6rem, 5vw, 2.2rem)', color: 'var(--text)', marginBottom: 8, lineHeight: 1.2 }}>
             Hey, {firstName} 👋
@@ -303,6 +152,7 @@ export default function DashboardPage() {
           <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem' }}>Ready to study? Upload a past paper or notes below.</p>
         </div>
 
+        {/* Stats */}
         {!loading && history.length > 0 && (
           <div className="animate-fade-up stagger-1" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 28 }}>
             {[
@@ -318,6 +168,7 @@ export default function DashboardPage() {
           </div>
         )}
 
+        {/* Upload CTA */}
         <div className="animate-fade-up stagger-1" style={{ marginBottom: 32 }}>
           <Link href="/upload" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'linear-gradient(135deg, rgba(79,142,247,0.1) 0%, rgba(167,139,250,0.1) 100%)', border: '1px solid rgba(79,142,247,0.25)', borderRadius: 16, padding: '18px 22px', textDecoration: 'none', transition: 'all 0.2s' }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(79,142,247,0.5)'; e.currentTarget.style.background = 'linear-gradient(135deg, rgba(79,142,247,0.15) 0%, rgba(167,139,250,0.15) 100%)'; }}
@@ -419,28 +270,136 @@ export default function DashboardPage() {
             <div style={{ border: '1px dashed var(--border)', borderRadius: 14, padding: '40px 24px', textAlign: 'center' }}>
               <p style={{ fontSize: 28, marginBottom: 10 }}>📚</p>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>{activeSubject ? "No sessions in this subject yet" : "No sessions yet"}</p>
-              <p style={{ color: 'var(--text-subtle)', fontSize: '0.78rem', marginTop: 4 }}>{activeSubject ? "Use the ⊕ icon on any session to assign it here" : "Your study sessions will appear here"}</p>
+              <p style={{ color: 'var(--text-subtle)', fontSize: '0.78rem', marginTop: 4 }}>{activeSubject ? "Use the tag button on any session to assign it here" : "Your study sessions will appear here"}</p>
             </div>
           )}
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, position: 'relative' }}>
-            {filteredHistory.map((item, i) => (
-              <div key={item.id} className={`animate-fade-up stagger-${Math.min(i + 1, 4)}`} style={{ position: 'relative' }}>
-                <SessionRow
-                  item={item}
-                  subjects={subjects}
-                  userId={userId}
-                  isDeleting={deletingId === item.id}
-                  isAssigning={assigningTo === item.id}
-                  onAssignOpen={(id: string) => setAssigningTo(id)}
-                  onAssignClose={() => setAssigningTo(null)}
-                  onAssign={(subjectId: string | null) => handleAssign(item.id, subjectId)}
-                  onDelete={() => setDeletingId(deletingId === item.id ? null : item.id)}
-                  onDeleteConfirm={() => handleDelete(item.id)}
-                  onDeleteCancel={() => setDeletingId(null)}
-                />
-              </div>
-            ))}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {filteredHistory.map((item, i) => {
+              const avatar = getFileAvatar(item.file_name);
+              const modeConf = MODE_CONFIG[item.mode] || MODE_CONFIG.both;
+              const itemSubject = subjects.find(s => s.id === item.subject_id);
+              const isDeleting = deletingId === item.id;
+              const isAssigning = assigningTo === item.id;
+
+              return (
+                <div key={item.id} className={`animate-fade-up stagger-${Math.min(i + 1, 4)}`}>
+
+                  {/* Delete confirmation */}
+                  {isDeleting && (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(248,113,113,0.06)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: 10, padding: '10px 14px', marginBottom: 4 }}>
+                      <p style={{ color: 'var(--danger)', fontSize: '0.8rem' }}>Delete this session?</p>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button onClick={() => handleDelete(item.id)} style={{ background: 'rgba(248,113,113,0.15)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 6, padding: '4px 12px', color: 'var(--danger)', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Delete</button>
+                        <button onClick={() => setDeletingId(null)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 12px', color: 'var(--text-muted)', fontSize: '0.78rem', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Cancel</button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Session card */}
+                  <div style={{
+                    background: 'var(--bg-card)', border: `1px solid ${isDeleting ? 'rgba(248,113,113,0.2)' : isAssigning ? 'rgba(79,142,247,0.3)' : 'var(--border)'}`,
+                    borderRadius: 12, overflow: 'hidden', transition: 'all 0.15s',
+                  }}>
+                    {/* Main row */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 14px' }}
+                      onMouseEnter={e => { if (!isDeleting && !isAssigning) { e.currentTarget.style.background = 'var(--bg-hover)'; }}}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                    >
+                      {/* Avatar */}
+                      <div style={{ width: 40, height: 40, borderRadius: 10, flexShrink: 0, background: avatar.bg, border: `1px solid ${avatar.color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{ color: avatar.color, fontSize: '0.8rem', fontWeight: 700 }}>{avatar.initials}</span>
+                      </div>
+
+                      {/* Info */}
+                      <Link href={`/results?id=${item.id}`} style={{ flex: 1, minWidth: 0, textDecoration: 'none' }}>
+                        <p style={{ color: 'var(--text)', fontSize: '0.88rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {shortName(item.file_name)}
+                        </p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3, flexWrap: 'wrap' }}>
+                          <span style={{ background: modeConf.bg, color: modeConf.color, fontSize: '0.68rem', fontWeight: 600, padding: '2px 8px', borderRadius: 20 }}>
+                            {modeConf.label}
+                          </span>
+                          {itemSubject && (
+                            <span style={{ background: `${itemSubject.color}18`, color: itemSubject.color, fontSize: '0.68rem', fontWeight: 600, padding: '2px 8px', borderRadius: 20, display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <span style={{ width: 5, height: 5, borderRadius: '50%', background: itemSubject.color }} />
+                              {itemSubject.name}
+                            </span>
+                          )}
+                          <span style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>
+                            {new Date(item.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                          </span>
+                        </div>
+                      </Link>
+
+                      {/* Tag button */}
+                      <button
+                        onClick={() => { setAssigningTo(isAssigning ? null : item.id); setDeletingId(null); }}
+                        title="Assign subject"
+                        style={{
+                          background: isAssigning ? 'rgba(79,142,247,0.1)' : 'none',
+                          border: isAssigning ? '1px solid rgba(79,142,247,0.3)' : 'none',
+                          padding: '5px 7px', color: isAssigning ? '#4f8ef7' : itemSubject ? itemSubject.color : 'var(--text-subtle)',
+                          cursor: 'pointer', fontSize: '0.9rem', borderRadius: 6, transition: 'all 0.15s', flexShrink: 0
+                        }}
+                        onMouseEnter={e => { if (!isAssigning) (e.currentTarget.style.color = 'var(--accent)'); }}
+                        onMouseLeave={e => { if (!isAssigning) (e.currentTarget.style.color = itemSubject ? itemSubject.color : 'var(--text-subtle)'); }}
+                      >⊕</button>
+
+                      {/* Delete button */}
+                      <button onClick={() => { setDeletingId(isDeleting ? null : item.id); setAssigningTo(null); }}
+                        style={{ background: 'none', border: 'none', padding: '5px 6px', color: isDeleting ? 'var(--danger)' : 'var(--text-subtle)', cursor: 'pointer', fontSize: '0.82rem', borderRadius: 6, transition: 'all 0.15s', flexShrink: 0 }}
+                        onMouseEnter={e => (e.target as HTMLElement).style.color = 'var(--danger)'}
+                        onMouseLeave={e => (e.target as HTMLElement).style.color = isDeleting ? 'var(--danger)' : 'var(--text-subtle)'}
+                      >✕</button>
+                    </div>
+
+                    {/* ── Inline subject picker — expands inside the card ── */}
+                    {isAssigning && (
+                      <div style={{ borderTop: '1px solid var(--border)', padding: '12px 14px', background: 'rgba(79,142,247,0.03)' }}>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 10 }}>
+                          Assign to subject
+                        </p>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                          {/* Remove option */}
+                          {item.subject_id && (
+                            <button onClick={() => handleAssign(item.id, null)} style={{
+                              background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.25)',
+                              borderRadius: 20, padding: '5px 12px', color: 'var(--danger)',
+                              fontSize: '0.75rem', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif"
+                            }}>✕ Remove</button>
+                          )}
+
+                          {subjects.length === 0 && (
+                            <p style={{ color: 'var(--text-subtle)', fontSize: '0.78rem' }}>No subjects yet — create one above</p>
+                          )}
+
+                          {subjects.map(s => {
+                            const isActive = item.subject_id === s.id;
+                            return (
+                              <button key={s.id} onClick={() => handleAssign(item.id, s.id)} style={{
+                                background: isActive ? `${s.color}20` : 'var(--bg)',
+                                border: `1px solid ${isActive ? s.color + '60' : 'var(--border)'}`,
+                                borderRadius: 20, padding: '5px 14px',
+                                color: isActive ? s.color : 'var(--text-muted)',
+                                fontSize: '0.75rem', fontWeight: isActive ? 600 : 400,
+                                cursor: 'pointer', transition: 'all 0.15s',
+                                fontFamily: "'DM Sans', sans-serif",
+                                display: 'flex', alignItems: 'center', gap: 6
+                              }}>
+                                <span style={{ width: 7, height: 7, borderRadius: '50%', background: s.color, flexShrink: 0 }} />
+                                {s.name}
+                                {isActive && <span style={{ fontSize: '0.7rem' }}>✓</span>}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
