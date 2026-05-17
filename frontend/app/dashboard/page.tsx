@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase";
@@ -44,15 +44,13 @@ export default function DashboardPage() {
   const [userEmail, setUserEmail] = useState("");
   const [userId, setUserId] = useState("");
   const [activeSubject, setActiveSubject] = useState<string | null>(null);
-
-  // Subject creation
   const [showNewSubject, setShowNewSubject] = useState(false);
   const [newSubjectName, setNewSubjectName] = useState("");
   const [newSubjectColor, setNewSubjectColor] = useState(SUBJECT_COLORS[0]);
   const [creatingSubject, setCreatingSubject] = useState(false);
-
-  // Assign subject
   const [assigningTo, setAssigningTo] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const assignRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function load() {
@@ -70,6 +68,17 @@ export default function DashboardPage() {
     }
     load();
   }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (assignRef.current && !assignRef.current.contains(e.target as Node)) {
+        setAssigningTo(null);
+      }
+    }
+    if (assigningTo) document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [assigningTo]);
 
   async function handleLogout() {
     await supabase.auth.signOut();
@@ -89,7 +98,6 @@ export default function DashboardPage() {
   }
 
   async function handleDeleteSubject(subjectId: string) {
-    if (!confirm("Delete this subject? Sessions will be unassigned but not deleted.")) return;
     try {
       await deleteSubject(userId, subjectId);
       setSubjects(prev => prev.filter(s => s.id !== subjectId));
@@ -104,6 +112,14 @@ export default function DashboardPage() {
       setHistory(prev => prev.map(h => h.id === resultId ? { ...h, subject_id: subjectId } : h));
     } catch {}
     setAssigningTo(null);
+  }
+
+  async function handleDelete(itemId: string) {
+    try {
+      await deleteResult(userId, itemId);
+      setHistory(prev => prev.filter(h => h.id !== itemId));
+    } catch {}
+    setDeletingId(null);
   }
 
   const firstName = userEmail.split("@")[0];
@@ -180,7 +196,7 @@ export default function DashboardPage() {
           </Link>
         </div>
 
-        {/* Subjects section */}
+        {/* Subjects */}
         <div className="animate-fade-up stagger-2" style={{ marginBottom: 28 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Subjects</p>
@@ -189,47 +205,46 @@ export default function DashboardPage() {
             </button>
           </div>
 
-          {/* New subject form */}
           {showNewSubject && (
             <div className="animate-fade-in" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px', marginBottom: 12 }}>
-              <input
-                type="text" placeholder="Subject name e.g. Wireless Computing"
+              <input type="text" placeholder="Subject name e.g. Wireless Computing"
                 value={newSubjectName} onChange={e => setNewSubjectName(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleCreateSubject()}
                 style={{ width: '100%', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', color: 'var(--text)', fontSize: '0.85rem', outline: 'none', marginBottom: 12, fontFamily: "'DM Sans', sans-serif" }}
                 onFocus={e => e.target.style.borderColor = 'var(--accent)'}
                 onBlur={e => e.target.style.borderColor = 'var(--border)'}
+                autoFocus
               />
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Color:</p>
                 {SUBJECT_COLORS.map(c => (
-                  <button key={c} onClick={() => setNewSubjectColor(c)} style={{
-                    width: 20, height: 20, borderRadius: '50%', background: c, border: `2px solid ${newSubjectColor === c ? '#fff' : 'transparent'}`, cursor: 'pointer', flexShrink: 0
-                  }} />
+                  <button key={c} onClick={() => setNewSubjectColor(c)} style={{ width: 20, height: 20, borderRadius: '50%', background: c, border: `2px solid ${newSubjectColor === c ? '#fff' : 'transparent'}`, cursor: 'pointer', flexShrink: 0 }} />
                 ))}
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={handleCreateSubject} disabled={!newSubjectName.trim() || creatingSubject} style={{ background: 'linear-gradient(135deg, #4f8ef7, #a78bfa)', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+                <button onClick={handleCreateSubject} disabled={!newSubjectName.trim() || creatingSubject}
+                  style={{ background: 'linear-gradient(135deg, #4f8ef7, #a78bfa)', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
                   {creatingSubject ? "Creating..." : "Create"}
                 </button>
-                <button onClick={() => setShowNewSubject(false)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 16px', fontSize: '0.82rem', color: 'var(--text-muted)', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+                <button onClick={() => setShowNewSubject(false)}
+                  style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 16px', fontSize: '0.82rem', color: 'var(--text-muted)', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
                   Cancel
                 </button>
               </div>
             </div>
           )}
 
-          {/* Subject filter chips */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             <button onClick={() => setActiveSubject(null)} style={{
               background: activeSubject === null ? 'rgba(79,142,247,0.1)' : 'var(--bg-card)',
               border: `1px solid ${activeSubject === null ? 'rgba(79,142,247,0.4)' : 'var(--border)'}`,
-              borderRadius: 20, padding: '5px 14px', color: activeSubject === null ? '#a0b8ff' : 'var(--text-muted)',
+              borderRadius: 20, padding: '5px 14px',
+              color: activeSubject === null ? '#a0b8ff' : 'var(--text-muted)',
               fontSize: '0.75rem', fontWeight: 500, cursor: 'pointer', transition: 'all 0.15s', fontFamily: "'DM Sans', sans-serif"
             }}>All sessions</button>
 
             {subjects.map(s => (
-              <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+              <div key={s.id} style={{ display: 'flex', alignItems: 'center' }}>
                 <button onClick={() => setActiveSubject(activeSubject === s.id ? null : s.id)} style={{
                   background: activeSubject === s.id ? `${s.color}18` : 'var(--bg-card)',
                   border: `1px solid ${activeSubject === s.id ? s.color + '50' : 'var(--border)'}`,
@@ -280,107 +295,168 @@ export default function DashboardPage() {
                 {activeSubject ? "No sessions in this subject yet" : "No sessions yet"}
               </p>
               <p style={{ color: 'var(--text-subtle)', fontSize: '0.78rem', marginTop: 4 }}>
-                {activeSubject ? "Assign sessions using the tag icon on any session" : "Your study sessions will appear here"}
+                {activeSubject ? "Use the ⊕ icon on any session to assign it here" : "Your study sessions will appear here"}
               </p>
             </div>
           )}
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }} ref={assignRef}>
             {filteredHistory.map((item, i) => {
               const avatar = getFileAvatar(item.file_name);
               const modeConf = MODE_CONFIG[item.mode] || MODE_CONFIG.both;
               const itemSubject = subjects.find(s => s.id === item.subject_id);
+              const isDeleting = deletingId === item.id;
+              const isAssigning = assigningTo === item.id;
+
               return (
-                <div key={item.id}
-                  className={`animate-fade-up stagger-${Math.min(i + 1, 4)}`}
-                  style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: '13px 14px', transition: 'all 0.15s' }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-hover)'; e.currentTarget.style.background = 'var(--bg-hover)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--bg-card)'; }}
-                >
-                  {/* Avatar */}
-                  <div style={{ width: 40, height: 40, borderRadius: 10, flexShrink: 0, background: avatar.bg, border: `1px solid ${avatar.color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <span style={{ color: avatar.color, fontSize: '0.8rem', fontWeight: 700 }}>{avatar.initials}</span>
-                  </div>
+                <div key={item.id} className={`animate-fade-up stagger-${Math.min(i + 1, 4)}`}>
 
-                  {/* Info */}
-                  <Link href={`/results?id=${item.id}`} style={{ flex: 1, minWidth: 0, textDecoration: 'none' }}>
-                    <p style={{ color: 'var(--text)', fontSize: '0.88rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {shortName(item.file_name)}
-                    </p>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3, flexWrap: 'wrap' }}>
-                      <span style={{ background: modeConf.bg, color: modeConf.color, fontSize: '0.68rem', fontWeight: 600, padding: '2px 8px', borderRadius: 20 }}>
-                        {modeConf.label}
-                      </span>
-                      {itemSubject && (
-                        <span style={{ background: `${itemSubject.color}18`, color: itemSubject.color, fontSize: '0.68rem', fontWeight: 600, padding: '2px 8px', borderRadius: 20, display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <span style={{ width: 5, height: 5, borderRadius: '50%', background: itemSubject.color }} />
-                          {itemSubject.name}
-                        </span>
-                      )}
-                      <span style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>
-                        {new Date(item.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                      </span>
-                    </div>
-                  </Link>
-
-                  {/* Assign subject button */}
-                  <div style={{ position: 'relative', flexShrink: 0 }}>
-                    <button onClick={() => setAssigningTo(assigningTo === item.id ? null : item.id)}
-                      title="Assign subject"
-                      style={{ background: 'none', border: 'none', padding: '6px 6px', color: itemSubject ? itemSubject.color : 'var(--text-subtle)', cursor: 'pointer', fontSize: '0.85rem', borderRadius: 6, transition: 'all 0.15s' }}
-                      onMouseEnter={e => (e.target as HTMLElement).style.color = 'var(--accent)'}
-                      onMouseLeave={e => (e.target as HTMLElement).style.color = itemSubject ? itemSubject.color : 'var(--text-subtle)'}
-                    >⊕</button>
-
-                    {/* Subject dropdown */}
-                    {assigningTo === item.id && (
-                      <div style={{ position: 'absolute', right: 0, top: '100%', zIndex: 20, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px', minWidth: 160, boxShadow: '0 8px 24px rgba(0,0,0,0.3)' }}>
-                        <p style={{ color: 'var(--text-muted)', fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', padding: '4px 8px 8px' }}>Assign to</p>
-                        {subjects.length === 0 && (
-                          <p style={{ color: 'var(--text-subtle)', fontSize: '0.75rem', padding: '4px 8px' }}>No subjects yet</p>
-                        )}
-                        {item.subject_id && (
-                          <button onClick={() => handleAssign(item.id, null)} style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: '7px 10px', color: 'var(--danger)', fontSize: '0.8rem', cursor: 'pointer', borderRadius: 6, fontFamily: "'DM Sans', sans-serif" }}>
-                            ✕ Remove subject
-                          </button>
-                        )}
-                        {subjects.map(s => (
-                          <button key={s.id} onClick={() => handleAssign(item.id, s.id)} style={{
-                            display: 'flex', alignItems: 'center', gap: 8, width: '100%',
-                            textAlign: 'left', background: item.subject_id === s.id ? `${s.color}15` : 'none',
-                            border: 'none', padding: '7px 10px', color: item.subject_id === s.id ? s.color : 'var(--text)',
-                            fontSize: '0.8rem', cursor: 'pointer', borderRadius: 6, fontFamily: "'DM Sans', sans-serif"
-                          }}>
-                            <span style={{ width: 8, height: 8, borderRadius: '50%', background: s.color, flexShrink: 0 }} />
-                            {s.name}
-                            {item.subject_id === s.id && <span style={{ marginLeft: 'auto', fontSize: '0.7rem' }}>✓</span>}
-                          </button>
-                        ))}
+                  {/* Delete confirmation row */}
+                  {isDeleting && (
+                    <div style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      background: 'rgba(248,113,113,0.06)', border: '1px solid rgba(248,113,113,0.2)',
+                      borderRadius: 10, padding: '10px 14px', marginBottom: 4
+                    }}>
+                      <p style={{ color: 'var(--danger)', fontSize: '0.8rem' }}>Delete this session?</p>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button onClick={() => handleDelete(item.id)} style={{
+                          background: 'rgba(248,113,113,0.15)', border: '1px solid rgba(248,113,113,0.3)',
+                          borderRadius: 6, padding: '4px 12px', color: 'var(--danger)',
+                          fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif"
+                        }}>Delete</button>
+                        <button onClick={() => setDeletingId(null)} style={{
+                          background: 'none', border: '1px solid var(--border)',
+                          borderRadius: 6, padding: '4px 12px', color: 'var(--text-muted)',
+                          fontSize: '0.78rem', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif"
+                        }}>Cancel</button>
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
 
-                  {/* Delete */}
-                  <button onClick={async (e) => {
-                    e.preventDefault();
-                    if (!confirm("Delete this session?")) return;
-                    try { await deleteResult(userId, item.id); setHistory(prev => prev.filter(h => h.id !== item.id)); } catch {}
-                  }} style={{ background: 'none', border: 'none', padding: '6px 6px', color: 'var(--text-subtle)', cursor: 'pointer', fontSize: '0.85rem', borderRadius: 6, transition: 'all 0.15s', flexShrink: 0 }}
-                    onMouseEnter={e => (e.target as HTMLElement).style.color = 'var(--danger)'}
-                    onMouseLeave={e => (e.target as HTMLElement).style.color = 'var(--text-subtle)'}
-                    title="Delete session"
-                  >✕</button>
+                  {/* Session card */}
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    background: 'var(--bg-card)', border: `1px solid ${isDeleting ? 'rgba(248,113,113,0.2)' : 'var(--border)'}`,
+                    borderRadius: 12, padding: '13px 14px', transition: 'all 0.15s',
+                    position: 'relative'
+                  }}
+                    onMouseEnter={e => { if (!isDeleting) { e.currentTarget.style.borderColor = 'var(--border-hover)'; e.currentTarget.style.background = 'var(--bg-hover)'; }}}
+                    onMouseLeave={e => { if (!isDeleting) { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--bg-card)'; }}}
+                  >
+                    {/* Avatar */}
+                    <div style={{ width: 40, height: 40, borderRadius: 10, flexShrink: 0, background: avatar.bg, border: `1px solid ${avatar.color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ color: avatar.color, fontSize: '0.8rem', fontWeight: 700 }}>{avatar.initials}</span>
+                    </div>
+
+                    {/* Info */}
+                    <Link href={`/results?id=${item.id}`} style={{ flex: 1, minWidth: 0, textDecoration: 'none' }}>
+                      <p style={{ color: 'var(--text)', fontSize: '0.88rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {shortName(item.file_name)}
+                      </p>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3, flexWrap: 'wrap' }}>
+                        <span style={{ background: modeConf.bg, color: modeConf.color, fontSize: '0.68rem', fontWeight: 600, padding: '2px 8px', borderRadius: 20 }}>
+                          {modeConf.label}
+                        </span>
+                        {itemSubject && (
+                          <span style={{ background: `${itemSubject.color}18`, color: itemSubject.color, fontSize: '0.68rem', fontWeight: 600, padding: '2px 8px', borderRadius: 20, display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <span style={{ width: 5, height: 5, borderRadius: '50%', background: itemSubject.color }} />
+                            {itemSubject.name}
+                          </span>
+                        )}
+                        <span style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>
+                          {new Date(item.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                        </span>
+                      </div>
+                    </Link>
+
+                    {/* Assign button + dropdown */}
+                    <div style={{ position: 'relative', flexShrink: 0, zIndex: isAssigning ? 100 : 1 }}>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setAssigningTo(isAssigning ? null : item.id); }}
+                        title="Assign subject"
+                        style={{
+                          background: isAssigning ? 'var(--bg-hover)' : 'none',
+                          border: isAssigning ? '1px solid var(--border)' : 'none',
+                          padding: '6px 7px', color: itemSubject ? itemSubject.color : 'var(--text-subtle)',
+                          cursor: 'pointer', fontSize: '1rem', borderRadius: 6, transition: 'all 0.15s',
+                          lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.color = 'var(--accent)')}
+                        onMouseLeave={e => (e.currentTarget.style.color = itemSubject ? itemSubject.color : 'var(--text-subtle)')}
+                      >⊕</button>
+
+                      {isAssigning && (
+                        <div
+                          onClick={e => e.stopPropagation()}
+                          style={{
+                            position: 'absolute', right: 0, top: 'calc(100% + 6px)',
+                            zIndex: 200, background: 'var(--bg-card)',
+                            border: '1px solid var(--border-hover)', borderRadius: 12,
+                            padding: '8px', minWidth: 180,
+                            boxShadow: '0 12px 40px rgba(0,0,0,0.5)'
+                          }}>
+                          <p style={{ color: 'var(--text-muted)', fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', padding: '4px 8px 8px' }}>
+                            Assign to subject
+                          </p>
+                          {item.subject_id && (
+                            <button onClick={() => handleAssign(item.id, null)} style={{
+                              display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+                              textAlign: 'left', background: 'none', border: 'none',
+                              padding: '8px 10px', color: 'var(--danger)', fontSize: '0.82rem',
+                              cursor: 'pointer', borderRadius: 8, fontFamily: "'DM Sans', sans-serif",
+                              marginBottom: 4
+                            }}
+                              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(248,113,113,0.08)')}
+                              onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                            >✕ Remove subject</button>
+                          )}
+                          {subjects.length === 0 && (
+                            <p style={{ color: 'var(--text-subtle)', fontSize: '0.78rem', padding: '6px 10px' }}>
+                              No subjects yet — create one above
+                            </p>
+                          )}
+                          {subjects.map(s => (
+                            <button key={s.id} onClick={() => handleAssign(item.id, s.id)} style={{
+                              display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                              textAlign: 'left',
+                              background: item.subject_id === s.id ? `${s.color}15` : 'none',
+                              border: 'none', padding: '8px 10px',
+                              color: item.subject_id === s.id ? s.color : 'var(--text)',
+                              fontSize: '0.82rem', cursor: 'pointer', borderRadius: 8,
+                              fontFamily: "'DM Sans', sans-serif", transition: 'background 0.1s'
+                            }}
+                              onMouseEnter={e => { if (item.subject_id !== s.id) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                              onMouseLeave={e => { if (item.subject_id !== s.id) e.currentTarget.style.background = 'none'; }}
+                            >
+                              <span style={{ width: 10, height: 10, borderRadius: '50%', background: s.color, flexShrink: 0 }} />
+                              {s.name}
+                              {item.subject_id === s.id && <span style={{ marginLeft: 'auto', fontSize: '0.75rem' }}>✓</span>}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Delete */}
+                    <button onClick={() => setDeletingId(isDeleting ? null : item.id)}
+                      style={{
+                        background: 'none', border: 'none', padding: '6px 6px',
+                        color: isDeleting ? 'var(--danger)' : 'var(--text-subtle)',
+                        cursor: 'pointer', fontSize: '0.85rem', borderRadius: 6,
+                        transition: 'all 0.15s', flexShrink: 0
+                      }}
+                      onMouseEnter={e => (e.target as HTMLElement).style.color = 'var(--danger)'}
+                      onMouseLeave={e => (e.target as HTMLElement).style.color = isDeleting ? 'var(--danger)' : 'var(--text-subtle)'}
+                      title="Delete session"
+                    >✕</button>
+                  </div>
                 </div>
               );
             })}
           </div>
         </div>
       </div>
-
-      {/* Close dropdown on outside click */}
-      {assigningTo && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 10 }} onClick={() => setAssigningTo(null)} />
-      )}
     </main>
   );
 }
