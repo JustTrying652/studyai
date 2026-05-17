@@ -36,7 +36,7 @@ def get_user_history(user_id: str) -> list:
     """Fetch all past results for a user."""
     response = (
         supabase.table("study_results")
-        .select("id, file_name, mode, created_at, result")
+        .select("id, file_name, mode, created_at, result, subject_id")
         .eq("user_id", user_id)
         .order("created_at", desc=True)
         .execute()

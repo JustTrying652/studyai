@@ -75,3 +75,35 @@ export async function generateQuiz(userId: string, resultId: string) {
   if (!res.ok) { const err = await res.json(); throw new Error(err.detail || "Quiz generation failed"); }
   return res.json(); // { questions: [...] }
 }
+
+export async function fetchSubjects(userId: string) {
+  const res = await fetch(`${API_URL}/subjects/${userId}`);
+  if (!res.ok) throw new Error("Failed to fetch subjects");
+  return res.json(); // { subjects: [...] }
+}
+
+export async function createSubject(userId: string, name: string, color: string) {
+  const res = await fetch(`${API_URL}/subjects/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id: userId, name, color }),
+  });
+  if (!res.ok) { const err = await res.json(); throw new Error(err.detail || "Failed to create subject"); }
+  return res.json();
+}
+
+export async function deleteSubject(userId: string, subjectId: string) {
+  const res = await fetch(`${API_URL}/subjects/${userId}/${subjectId}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("Failed to delete subject");
+  return res.json();
+}
+
+export async function assignSubject(userId: string, resultId: string, subjectId: string | null) {
+  const res = await fetch(`${API_URL}/subjects/${userId}/${resultId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id: userId, subject_id: subjectId }),
+  });
+  if (!res.ok) throw new Error("Failed to assign subject");
+  return res.json();
+}

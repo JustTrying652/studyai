@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import upload, process, history, chat, quiz
+from routers import upload, process, history, chat, quiz, subjects
 import os
 
 app = FastAPI(title="StudyAI API", version="1.0.0")
@@ -28,7 +28,7 @@ app.include_router(process.router, prefix="/process", tags=["Process"])
 app.include_router(history.router, prefix="/history", tags=["History"])
 app.include_router(chat.router, prefix="/chat", tags=["Chat"])
 app.include_router(quiz.router, prefix="/quiz", tags=["Quiz"])
-
+app.include_router(subjects.router, prefix="/subjects", tags=["Subjects"])  
 @app.get("/")
 def root():
     return {"status": "StudyAI API is running"}
