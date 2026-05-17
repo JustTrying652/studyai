@@ -65,3 +65,13 @@ export async function sendChatMessage(
   if (!res.ok) { const err = await res.json(); throw new Error(err.detail || "Chat failed"); }
   return res.json(); // { reply: string }
 }
+
+export async function generateQuiz(userId: string, resultId: string) {
+  const res = await fetch(`${API_URL}/quiz/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id: userId, result_id: resultId }),
+  });
+  if (!res.ok) { const err = await res.json(); throw new Error(err.detail || "Quiz generation failed"); }
+  return res.json(); // { questions: [...] }
+}

@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import { createClient } from "@/lib/supabase";
-import { fetchResult, deleteResult, sendChatMessage, ChatMessage } from "@/lib/api";
+import { fetchResult, deleteResult, sendChatMessage, ChatMessage, generateQuiz } from "@/lib/api";
 
 const MODE_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   answers: { label: "Answers",         color: "#4f8ef7", bg: "rgba(79,142,247,0.12)" },
@@ -29,6 +29,8 @@ function ResultsContent() {
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
   const [chatError, setChatError] = useState("");
+  const [quizLoading, setQuizLoading] = useState(false);
+  const [quizError, setQuizError] = useState("");
 
   useEffect(() => {
     if (!id) return;
@@ -82,6 +84,21 @@ function ResultsContent() {
       setChatLoading(false);
     }
   }
+  async function handleQuiz() {
+  if (!userId || !id) return;
+  setQuizLoading(true);
+  setQuizError("");
+  try {
+    const data = await generateQuiz(userId, id);
+    const params = new URLSearchParams({ id: id });
+    // Store questions in sessionStorage to pass to quiz page
+    sessionStorage.setItem(`quiz_${id}`, JSON.stringify(data.questions));
+    router.push(`/quiz?id=${id}`);
+  } catch (err: any) {
+    setQuizError(err.message || "Failed to generate quiz.");
+    setQuizLoading(false);
+  }
+}
 
   const modeConf = result ? (MODE_CONFIG[result.mode] || MODE_CONFIG.both) : null;
 
@@ -204,7 +221,17 @@ function ResultsContent() {
                       onMouseEnter={e => { (e.target as HTMLElement).style.color = 'var(--text)'; }}
                       onMouseLeave={e => { (e.target as HTMLElement).style.color = 'var(--text-muted)'; }}
                     >Print</button>
-
+                    <button onClick={handleQuiz} disabled={quizLoading} style={{
+  background: quizLoading ? 'var(--bg-card)' : 'rgba(52,211,153,0.1)',
+  border: `1px solid ${quizLoading ? 'var(--border)' : 'rgba(52,211,153,0.3)'}`,
+  borderRadius: 8, padding: '7px 12px',
+  color: quizLoading ? 'var(--text-muted)' : '#34d399',
+  fontSize: '0.78rem', cursor: quizLoading ? 'not-allowed' : 'pointer',
+  fontFamily: "'DM Sans', sans-serif", transition: 'all 0.2s',
+  whiteSpace: 'nowrap'
+}}>
+  {quizLoading ? "Generating..." : "Quiz me"}
+</button>
                     <button onClick={() => setShowDeleteConfirm(true)} style={{
                       background: 'var(--bg-card)', border: '1px solid var(--border)',
                       borderRadius: 8, padding: '7px 12px', color: 'var(--text-muted)',
@@ -223,6 +250,9 @@ function ResultsContent() {
                   padding: '16px 18px', borderRadius: 12, marginBottom: 24,
                   background: 'rgba(248,113,113,0.06)', border: '1px solid rgba(248,113,113,0.2)'
                 }}>
+                  {quizError && (
+  <p style={{ color: 'var(--danger)', fontSize: '0.78rem', marginTop: 8 }}>{quizError}</p>
+)}
                   <p style={{ color: 'var(--danger)', fontSize: '0.88rem', fontWeight: 500, marginBottom: 12 }}>
                     Delete this session? This cannot be undone.
                   </p>

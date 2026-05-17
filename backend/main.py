@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import upload, process, history, chat
+from routers import upload, process, history, chat, quiz
 import os
 
 app = FastAPI(title="StudyAI API", version="1.0.0")
@@ -27,6 +27,7 @@ app.include_router(upload.router, prefix="/upload", tags=["Upload"])
 app.include_router(process.router, prefix="/process", tags=["Process"])
 app.include_router(history.router, prefix="/history", tags=["History"])
 app.include_router(chat.router, prefix="/chat", tags=["Chat"])
+app.include_router(quiz.router, prefix="/quiz", tags=["Quiz"])
 
 @app.get("/")
 def root():
