@@ -373,6 +373,7 @@ export default function DashboardPage() {
                     {/* Assign button + dropdown */}
                     <div style={{ position: 'relative', flexShrink: 0, zIndex: isAssigning ? 100 : 1 }}>
                       <button
+                        data-assign={item.id}  
                         onClick={(e) => { e.stopPropagation(); setAssigningTo(isAssigning ? null : item.id); }}
                         title="Assign subject"
                         style={{
@@ -390,8 +391,20 @@ export default function DashboardPage() {
                         <div
                           onClick={e => e.stopPropagation()}
                           style={{
-                            position: 'absolute', right: 0, top: 'calc(100% + 6px)',
-                            zIndex: 200, background: 'var(--bg-card)',
+                            position: 'fixed',
+                            top: (() => {
+                              const btn = document.querySelector(`[data-assign="${item.id}"]`);
+                              if (!btn) return 0;
+                              const rect = btn.getBoundingClientRect();
+                              return rect.bottom +6;
+                            })(),
+                            right: (() => {
+                              const btn = document.querySelector(`[data-assign="${item.id}"]`);
+                              if (!btn) return 16;
+                              const rect = btn.getBoundingClientRect();
+                              return window.innerWidth - rect.right;
+                            })(),
+                            zIndex: 9999, background: 'var(--bg-card)',  
                             border: '1px solid var(--border-hover)', borderRadius: 12,
                             padding: '8px', minWidth: 180,
                             boxShadow: '0 12px 40px rgba(0,0,0,0.5)'
