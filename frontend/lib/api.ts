@@ -107,3 +107,13 @@ export async function assignSubject(userId: string, resultId: string, subjectId:
   if (!res.ok) throw new Error("Failed to assign subject");
   return res.json();
 }
+
+export async function generateStudyPlan(userId: string, sessions: { file_name: string; mode: string; subject_name?: string }[]) {
+  const res = await fetch(`${API_URL}/studyplan/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id: userId, sessions }),
+  });
+  if (!res.ok) { const err = await res.json(); throw new Error(err.detail || "Failed to generate study plan"); }
+  return res.json(); // { plan: [...] }
+}

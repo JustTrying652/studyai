@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase";
-import { fetchHistory, deleteResult, fetchSubjects, createSubject, deleteSubject, assignSubject } from "@/lib/api";
+import { fetchHistory, deleteResult, fetchSubjects, createSubject, deleteSubject, assignSubject, generateStudyPlan } from "@/lib/api";
 
 const MODE_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   answers: { label: "Answers",       color: "#4f8ef7", bg: "rgba(79,142,247,0.12)" },
@@ -50,6 +50,10 @@ export default function DashboardPage() {
   const [creatingSubject, setCreatingSubject] = useState(false);
   const [assigningTo, setAssigningTo] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [showPlan, setShowPlan] = useState(false);
+  const [plan, setPlan] = useState<any[]>([]);
+  const [planLoading, setPlanLoading] = useState(false);
+  const [planError, setPlanError] = useState("");
 
   useEffect(() => {
     async function load() {
@@ -109,6 +113,23 @@ export default function DashboardPage() {
     } catch {}
     setDeletingId(null);
   }
+  async function handleGeneratePlan() {
+  setPlanLoading(true);
+  setPlanError("");
+  setShowPlan(true);
+  try {
+    const sessions = history.map(h => ({
+      file_name: h.file_name,
+      mode: h.mode,
+      subject_name: subjects.find((s: any) => s.id === h.subject_id)?.name || "General",
+    }));
+    const data = await generateStudyPlan(userId, sessions);
+    setPlan(data.plan);
+  } catch (err: any) {
+    setPlanError(err.message || "Failed to generate study plan.");
+  }
+  setPlanLoading(false);
+}
 
   const firstName = userEmail.split("@")[0];
   const filteredHistory = activeSubject
@@ -183,6 +204,30 @@ export default function DashboardPage() {
             </div>
           </Link>
         </div>
+
+        {!loading && history.length >= 2 && (
+  <div className="animate-fade-up stagger-1" style={{ marginBottom: 32 }}>
+    <button onClick={handleGeneratePlan} style={{
+      width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      background: 'rgba(52,211,153,0.06)', border: '1px solid rgba(52,211,153,0.2)',
+      borderRadius: 16, padding: '16px 22px', cursor: 'pointer',
+      transition: 'all 0.2s', fontFamily: "'DM Sans', sans-serif"
+    }}
+      onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(52,211,153,0.4)'; e.currentTarget.style.background = 'rgba(52,211,153,0.1)'; }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(52,211,153,0.2)'; e.currentTarget.style.background = 'rgba(52,211,153,0.06)'; }}
+    >
+      <div style={{ textAlign: 'left' }}>
+        <p style={{ color: '#34d399', fontWeight: 600, fontSize: '0.95rem', marginBottom: 3 }}>
+          Generate study plan
+        </p>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+          AI creates a day-by-day revision schedule from your sessions
+        </p>
+      </div>
+      <span style={{ fontSize: 22, flexShrink: 0 }}>📅</span>
+    </button>
+  </div>
+)}
 
         {/* Subjects */}
         <div className="animate-fade-up stagger-2" style={{ marginBottom: 28 }}>
@@ -403,6 +448,134 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+      {/* Study plan modal */}
+{showPlan && (
+  <>
+    {/* Backdrop */}
+    <div
+      onClick={() => setShowPlan(false)}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 100, backdropFilter: 'blur(4px)' }}
+    />
+
+    {/* Modal */}
+    <div style={{
+      position: 'fixed', top: '50%', left: '50%',
+      transform: 'translate(-50%, -50%)',
+      zIndex: 101, width: '90%', maxWidth: 580,
+      maxHeight: '85vh', overflowY: 'auto',
+      background: 'var(--bg-card)', border: '1px solid var(--border)',
+      borderRadius: 20, padding: '28px 24px',
+      boxShadow: '0 24px 80px rgba(0,0,0,0.5)'
+    }}>
+
+      {/* Modal header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+        <div>
+          <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: '1.4rem', color: 'var(--text)', marginBottom: 4 }}>
+            Your Study Plan 📅
+          </h2>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+            AI-generated revision schedule based on your sessions
+          </p>
+        </div>
+        <button onClick={() => setShowPlan(false)} style={{
+          background: 'none', border: '1px solid var(--border)', borderRadius: 8,
+          padding: '6px 10px', color: 'var(--text-muted)', fontSize: '0.85rem',
+          cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", flexShrink: 0
+        }}>✕ Close</button>
+      </div>
+
+      {/* Loading */}
+      {planLoading && (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 0', gap: 16 }}>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {[0,1,2].map(i => (
+              <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: '#34d399', animation: 'pulse-dot 1.2s ease infinite', animationDelay: `${i * 0.2}s` }} />
+            ))}
+          </div>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>AI is planning your revision schedule...</p>
+        </div>
+      )}
+
+      {/* Error */}
+      {planError && (
+        <p style={{ color: 'var(--danger)', fontSize: '0.85rem', padding: '12px 16px', background: 'rgba(248,113,113,0.08)', borderRadius: 10, border: '1px solid rgba(248,113,113,0.2)' }}>
+          {planError}
+        </p>
+      )}
+
+      {/* Plan days */}
+      {!planLoading && plan.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {plan.map((day: any) => {
+            const typeColors: Record<string, string> = {
+              review: '#4f8ef7', practice: '#a78bfa', quiz: '#fb923c',
+              notes: '#34d399', rest: '#5a6484'
+            };
+            return (
+              <div key={day.day} style={{
+                background: 'var(--bg)', border: '1px solid var(--border)',
+                borderRadius: 14, padding: '18px 18px', transition: 'all 0.15s'
+              }}>
+                {/* Day header */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                  <div style={{
+                    width: 32, height: 32, borderRadius: 8, flexShrink: 0,
+                    background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.2)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}>
+                    <span style={{ color: '#34d399', fontSize: '0.75rem', fontWeight: 700 }}>{day.day}</span>
+                  </div>
+                  <div>
+                    <p style={{ color: 'var(--text)', fontSize: '0.9rem', fontWeight: 600 }}>{day.title}</p>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: 1 }}>{day.focus}</p>
+                  </div>
+                </div>
+
+                {/* Tasks */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: 10 }}>
+                  {day.tasks?.map((task: any, j: number) => (
+                    <div key={j} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{
+                        background: `${typeColors[task.type] || '#5a6484'}15`,
+                        color: typeColors[task.type] || '#5a6484',
+                        fontSize: '0.65rem', fontWeight: 700, padding: '2px 7px',
+                        borderRadius: 20, flexShrink: 0, textTransform: 'uppercase', letterSpacing: '0.05em'
+                      }}>{task.type}</span>
+                      <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', flex: 1 }}>{task.task}</p>
+                      <span style={{ color: 'var(--text-subtle)', fontSize: '0.72rem', flexShrink: 0 }}>{task.duration}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Tip */}
+                {day.tip && (
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', background: 'rgba(52,211,153,0.05)', borderRadius: 8, border: '1px solid rgba(52,211,153,0.1)' }}>
+                    <span style={{ fontSize: 12, flexShrink: 0, marginTop: 1 }}>💡</span>
+                    <p style={{ color: '#34d399', fontSize: '0.75rem', lineHeight: 1.5 }}>{day.tip}</p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Regenerate button */}
+          <button onClick={handleGeneratePlan} style={{
+            width: '100%', background: 'none', border: '1px solid var(--border)',
+            borderRadius: 10, padding: '10px', color: 'var(--text-muted)',
+            fontSize: '0.82rem', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+            transition: 'all 0.2s', marginTop: 4
+          }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = '#34d399'; e.currentTarget.style.color = '#34d399'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-muted)'; }}
+          >
+            ↺ Regenerate plan
+          </button>
+        </div>
+      )}
+    </div>
+  </>
+)}
     </main>
   );
 }
