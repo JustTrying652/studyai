@@ -9,12 +9,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
 
+  // Set dark on first load
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", "dark");
+  }, []);
+
   function toggle() {
-    setTheme(t => t === "dark" ? "light" : "dark");
+    setTheme(t => {
+      const next = t === "dark" ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", next);
+      return next;
+    });
   }
 
   return (
-    <html lang="en" data-theme="dark">
+    <html lang="en">
       <head>
         <title>StudyAI</title>
         <meta name="description" content="Upload past papers or notes and get AI-generated answers and summaries." />
