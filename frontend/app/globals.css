@@ -3,6 +3,33 @@
 @tailwind components;
 @tailwind utilities;
 
+[data-theme="light"] {
+  --bg: #f8f7f4;
+  --bg-card: #ffffff;
+  --bg-hover: #f0ede8;
+  --border: #e2ddd8;
+  --border-hover: #c8c2ba;
+  --text: #1a1714;
+  --text-muted: #7a7268;
+  --text-subtle: #c0b8b0;
+  --accent: #3b7de8;
+  --accent-2: #7c5fd4;
+  --accent-3: #1fa866;
+  --accent-hover: #2d6fd4;
+  --accent-dim: rgba(59,125,232,0.08);
+  --accent-2-dim: rgba(124,95,212,0.08);
+  --accent-3-dim: rgba(31,168,102,0.08);
+  --danger: #d94f4f;
+  --glow: rgba(59,125,232,0.1);
+}
+
+[data-theme="light"] body::before {
+  background: radial-gradient(circle, rgba(59,125,232,0.05) 0%, transparent 70%);
+}
+[data-theme="light"] body::after {
+  background: radial-gradient(circle, rgba(124,95,212,0.04) 0%, transparent 70%);
+}
+
 :root {
   --bg: #080b12;
   --bg-card: #0f1420;
@@ -37,6 +64,7 @@ body {
 
 /* Animated gradient bg */
 body::before {
+
   content: '';
   position: fixed;
   top: -40%;
