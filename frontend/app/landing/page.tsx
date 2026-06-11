@@ -323,7 +323,7 @@ export default function LandingPage() {
             <span style={{ fontFamily: "'DM Serif Display', serif", fontSize: 14, color: 'var(--text-muted)' }}>StudyAI</span>
           </div>
           <p style={{ color: 'var(--text-subtle)', fontSize: '0.75rem' }}>
-            Built for students, by a student.
+            Built for students
           </p>
           <Link href="/login" style={{ color: 'var(--text-muted)', fontSize: '0.78rem', textDecoration: 'none' }}>
             Sign in →
