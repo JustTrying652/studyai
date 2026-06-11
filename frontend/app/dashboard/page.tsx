@@ -170,7 +170,7 @@ export default function DashboardPage() {
           <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 'clamp(1.6rem, 5vw, 2.2rem)', color: 'var(--text)', marginBottom: 8, lineHeight: 1.2 }}>
             Hey, {firstName} 👋
           </h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem' }}>Ready to study? Upload a past paper or notes below.</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem' }}>Ready to study? </p>
         </div>
 
         {/* Stats */}
