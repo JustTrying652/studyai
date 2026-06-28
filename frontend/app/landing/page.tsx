@@ -60,7 +60,7 @@ export default function LandingPage() {
               transition: 'all 0.2s', fontFamily: "'DM Sans', sans-serif"
             }}
               className="btn-secondary"
-            >Sign </Link>
+            >Sign in</Link>
             <Link href="/login" style={{
               background: 'linear-gradient(135deg, #4f8ef7, #a78bfa)',
               color: '#fff', fontSize: '0.85rem', textDecoration: 'none',
