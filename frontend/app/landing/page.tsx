@@ -68,7 +68,7 @@ export default function LandingPage() {
               transition: 'all 0.2s', fontFamily: "'DM Sans', sans-serif"
             }}
               className="btn-primary"
-            >Get started</Link>
+            >Get </Link>
           </div>
         </nav>
 
