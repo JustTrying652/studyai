@@ -326,7 +326,7 @@ export default function LandingPage() {
             Built for students, by a student.
           </p>
           <Link href="/login" style={{ color: 'var(--text-muted)', fontSize: '0.78rem', textDecoration: 'none' }}>
-            Sign in →
+            Sign  →
           </Link>
         </footer>
 
